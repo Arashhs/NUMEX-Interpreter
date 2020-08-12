@@ -45,9 +45,13 @@
 
 ;; Problem 1
 
-(define (racketlist->numexlist xs) "CHANGE")
+(define (racketlist->numexlist xs)
+  (cond[(null? xs) (munit)]
+      [ #t (apair (car xs) (racketlist->numexlist (cdr xs)))]))
 
-(define (numexlist->racketlist xs) "CHANGE")
+(define (numexlist->racketlist xs)
+  (cond[(ismunit xs) (null)]
+       [ #t (cons (apair-e1 xs)(numexlist->racketlist (apair-e2 xs)))]))
 
 ;; Problem 2
 
