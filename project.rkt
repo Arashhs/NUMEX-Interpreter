@@ -50,7 +50,7 @@
       [ #t (apair (car xs) (racketlist->numexlist (cdr xs)))]))
 
 (define (numexlist->racketlist xs)
-  (cond[(ismunit xs) (null)]
+  (cond[(munit? xs) (null)]
        [ #t (cons (apair-e1 xs)(numexlist->racketlist (apair-e2 xs)))]))
 
 ;; Problem 2
@@ -59,7 +59,9 @@
 ;; Complete this function
 (define (envlookup env str)
   (cond [(null? env) (error "unbound variable during evaluation" str)]
-  		"CHANGE" 
+  	[(not (list? env)) (error "enviornment is not a list")]
+        [(not (string? str)) (error "str is not a string")]
+        [#t (envlookup (cdr env) str )]
 		)
  )
 
@@ -78,6 +80,60 @@
                        (num-int v2)))
                (error "NUMEX addition applied to non-number")))]
         ;; CHANGE add more cases here
+        [(num? e) ;; Evaluating num
+         (cond [(integer? num-int e)(e)]
+               [#t (error "NUMEX num must contain an integer")])]
+
+        [(bool? e) ;; Evaluating bool
+         (cond [(boolean? bool-boolean e)(e)]
+               [#t (error "NUMEX bool must contain a boolean")])]
+
+        [(munit? e) ;; Evaluating munit
+         (munit)]
+
+        [(minus? e) ;; Evaluating subtraction
+         (let ([v1 (eval-under-env (minus-e1 e) env)]
+               [v2 (eval-under-env (minus-e2 e) env)])
+           (if (and (num? v1)
+                    (num? v2))
+               (num (- (num-int v1) 
+                       (num-int v2)))
+               (error "NUMEX subtraction applied to non-number")))]
+
+        [(mult? e) ;; Evaluating multiplication
+         (let ([v1 (eval-under-env (mult-e1 e) env)]
+               [v2 (eval-under-env (mult-e2 e) env)])
+           (if (and (num? v1)
+                    (num? v2))
+               (num (* (num-int v1) 
+                       (num-int v2)))
+               (error "NUMEX multiplication applied to non-number")))]
+
+        [(div? e) ;; Evaluating division
+         (let ([v1 (eval-under-env (div-e1 e) env)]
+               [v2 (eval-under-env (div-e2 e) env)])
+           (if (and (num? v1)
+                    (num? v2))
+               (num (floor (/ (num-int v1) 
+                       (num-int v2))))
+               (error "NUMEX division applied to non-number")))]
+
+        [(andalso? e) ;; Evaluating andalso
+         (let ([v1 (eval-under-env (andalso-e1 e) env)])
+           (if (and (bool? v1)
+                    (eq? (bool-boolean v1) #f)) (v1)
+                                                (let ([v2 (eval-under-env (andalso-e2 e) env)])
+                                                  (if (bool? v2) (v2)
+                                                      (error "At least one of the arguments of andalso is not a bool expression")))))]
+
+        [(andalso? e) ;; Evaluating orelse
+         (let ([v1 (eval-under-env (orelse-e1 e) env)])
+           (if (and (bool? v1)
+                    (eq? (bool-boolean v1) #t)) (v1)
+                                                (let ([v2 (eval-under-env (orelse-e2 e) env)])
+                                                  (if (bool? v2) (v2)
+                                                      (error "At least one of the arguments of orelse is not a bool expression")))))]     
+        
         [#t (error (format "bad NUMEX expression: ~v" e))]))
 
 ;; Do NOT change
