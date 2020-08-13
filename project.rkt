@@ -21,7 +21,7 @@
 (struct cnd  (e1 e2 e3)  #:transparent)  ;; if e1 then e2 else e3 
 (struct iseq  (e1 e2)  #:transparent)  ;; comparison
 (struct ifnzero  (e1 e2 e3)  #:transparent)  ;; if e1 != zero then e2 else e3 
-(struct ifleq  (e1 e2 e3 e4)  #:transparent)  ;; if e1 <= e2 then e3 else e4 
+(struct ifleq  (e1 e2 e3 e4)  #:transparent)  ;; if e1 > e2 then e4 else e3
 
 (struct lam  (nameopt formal body) #:transparent) ;; a recursive(?) 1-argument function
 (struct apply (funexp actual)       #:transparent) ;; function application
@@ -121,18 +121,58 @@
         [(andalso? e) ;; Evaluating andalso
          (let ([v1 (eval-under-env (andalso-e1 e) env)])
            (if (and (bool? v1)
-                    (eq? (bool-boolean v1) #f)) (v1)
+                    (eq? (bool-boolean v1) #f)) v1
                                                 (let ([v2 (eval-under-env (andalso-e2 e) env)])
-                                                  (if (bool? v2) (v2)
+                                                  (if (bool? v2) v2
                                                       (error "At least one of the arguments of andalso is not a bool expression")))))]
 
-        [(andalso? e) ;; Evaluating orelse
-         (let ([v1 (eval-under-env (orelse-e1 e) env)])
+        [(neg? e) ;; Evaluating neg
+         (let ([v1 (eval-under-env (neg-e1 e) env)])
+           (if (bool? v1) (bool (not (bool-boolean v1)))
+               (if (num? v1) (num (- (num-int v1)))
+                (error "NUMEX neg applied to non-number and non-boolean"))))]
+
+        [(cnd? e) ;; Evaluating cnd
+         (let ([v1 (eval-under-env (cnd-e1 e) env)])
+           (if (bool? v1)
+                    (if (eq? (bool-boolean v1) #t) (eval-under-env (cnd-e2 e) env)
+                        (eval-under-env (cnd-e3 e) env))
+                    (error "First argument of NUMEX cnd must be a bool expression")))]
+
+        [(iseq? e) ;; Evaluating iseq
+         (let ([v1 (eval-under-env (iseq-e1 e) env)]
+               [v2 (eval-under-env (iseq-e2 e) env)])
            (if (and (bool? v1)
-                    (eq? (bool-boolean v1) #t)) (v1)
-                                                (let ([v2 (eval-under-env (orelse-e2 e) env)])
-                                                  (if (bool? v2) (v2)
-                                                      (error "At least one of the arguments of orelse is not a bool expression")))))]     
+                    (bool? v2))
+               (bool (eq? (bool-boolean v1)(bool-boolean v2)))
+               (if (and (num? v1)
+                        (num? v2))
+                   (bool (eq? (num-int v1)(num-int v2)))
+                   (error "the arguments types are not both num or both bool"))))]
+
+        [(ifnzero? e) ;; Evaluating ifnzero
+         (let ([v1 (eval-under-env (ifnzero-e1 e) env)])
+           (if (num? v1)
+                    (if (not (eq? (num-int v1) 0)) (eval-under-env (ifnzero-e2 e) env)
+                        (eval-under-env (ifnzero-e3 e) env))
+                    (error "First argument of NUMEX ifnzero must evaluate to a num")))]
+
+        [(ifleq? e) ;; Evaluating ifleq
+         (let ([v1 (eval-under-env (ifleq-e1 e) env)]
+               [v2 (eval-under-env (ifleq-e2 e) env)])
+           (if (and (num? v1)
+                    (num? v2))
+                    (if (> (num-int v1)(num-int v2)) (eval-under-env (ifleq-e4 e) env)
+                        (eval-under-env (ifleq-e3 e) env))
+                    (error "First two arguments of NUMEX ifleq must evaluate to a num")))]
+
+        [(with? e) ;; Evaluating with
+         (let ([v1 (eval-under-env (with-e1 e) env)])
+           (eval-under-env (with-e2 e)
+                           (cons (cons (with-s e) v1)(env)) ;; Extended environment
+                           ))]
+         
+
         
         [#t (error (format "bad NUMEX expression: ~v" e))]))
 
