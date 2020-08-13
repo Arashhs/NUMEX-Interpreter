@@ -81,15 +81,17 @@
                (error "NUMEX addition applied to non-number")))]
         ;; CHANGE add more cases here
         [(num? e) ;; Evaluating num
-         (cond [(integer? num-int e)(e)]
+         (cond [(integer? (num-int e)) e]
                [#t (error "NUMEX num must contain an integer")])]
 
         [(bool? e) ;; Evaluating bool
-         (cond [(boolean? bool-boolean e)(e)]
+         (cond [(boolean? (bool-boolean e)) e]
                [#t (error "NUMEX bool must contain a boolean")])]
 
         [(munit? e) ;; Evaluating munit
          (munit)]
+
+        [ (closure? e) e]
 
         [(minus? e) ;; Evaluating subtraction
          (let ([v1 (eval-under-env (minus-e1 e) env)]
@@ -114,8 +116,8 @@
                [v2 (eval-under-env (div-e2 e) env)])
            (if (and (num? v1)
                     (num? v2))
-               (num (floor (/ (num-int v1) 
-                       (num-int v2))))
+               (num (quotient (num-int v1) 
+                       (num-int v2)))
                (error "NUMEX division applied to non-number")))]
 
         [(andalso? e) ;; Evaluating andalso
@@ -123,6 +125,14 @@
            (if (and (bool? v1)
                     (eq? (bool-boolean v1) #f)) v1
                                                 (let ([v2 (eval-under-env (andalso-e2 e) env)])
+                                                  (if (bool? v2) v2
+                                                      (error "At least one of the arguments of andalso is not a bool expression")))))]
+
+        [(orelse? e) ;; Evaluating orelse
+         (let ([v1 (eval-under-env (orelse-e1 e) env)])
+           (if (and (bool? v1)
+                    (eq? (bool-boolean v1) #t)) v1
+                                                (let ([v2 (eval-under-env (orelse-e2 e) env)])
                                                   (if (bool? v2) v2
                                                       (error "At least one of the arguments of andalso is not a bool expression")))))]
 
@@ -148,7 +158,8 @@
                (if (and (num? v1)
                         (num? v2))
                    (bool (eq? (num-int v1)(num-int v2)))
-                   (error "the arguments types are not both num or both bool"))))]
+                   (bool #f))))]
+    ;;    (error "the arguments types are not both num or both bool")
 
         [(ifnzero? e) ;; Evaluating ifnzero
          (let ([v1 (eval-under-env (ifnzero-e1 e) env)])
@@ -171,6 +182,55 @@
            (eval-under-env (with-e2 e)
                            (cons (cons (with-s e) v1)(env)) ;; Extended environment
                            ))]
+
+        [(lam? e) ;; Evaluating lam
+         (closure env e)]
+
+        [(apply? e) ;; Evaluating apply
+         (let ([funexp (eval-under-env (apply-funexp e) env)]
+               [actual (eval-under-env (apply-actual e) env)])
+           (if (closure? funexp)
+               (let ([closEnv (closure-env funexp)]                
+                     [closFun (closure-f e)])
+                 (if (lam? closFun)
+                     (let ([funName (lam-nameopt closFun)]
+                           [funFormal (lam-formal closFun)])
+                       (eval-under-env (lam-body closFun) (cons (cons funName funexp)(cons (cons funFormal actual) closEnv))))
+                     (error "Closure's function is not in the right shape (lam)")))    
+               (error "Function doesn't evaluate to closure")))]
+
+        [(apair? e) ;; Evaluating apair
+         (let ([v1 (eval-under-env (apair-e1 e) env)]
+               [v2 (eval-under-env (apair-e2 e) env)])
+           (apair v1 v2))]
+
+        [(1st? e) ;; Evaluating 1st
+         (let ([v1 (eval-under-env (1st-e1 e) env)])
+           (if (apair? v1) (apair-e1 v1)
+               (error "Argument of NUMEX 1st must evaluate to apair")))]
+
+        [(2nd? e) ;; Evaluating 2nd
+         (let ([v1 (eval-under-env (2nd-e1 e) env)])
+           (if (apair? v1) (apair-e2 v1)
+               (error "Argument of NUMEX 2nd must evaluate to apair")))]
+
+        [(ismunit? e) ;; Evaluating ismunit
+         (let ([v1 (eval-under-env (ismunit-e e) env)])
+           (if (eq? v1 munit) (bool #t)
+               (bool #f)))]
+
+        [(letrec? e) ;; Evaluating letrec
+         (let ([e1 (eval-under-env (letrec-e1 e) env)]
+               [s1 (letrec-s1 e)]
+               [e2 (eval-under-env (letrec-e2 e) env)]
+               [s2 (letrec-s2 e)]
+               [e3 (eval-under-env (letrec-e3 e) env)]
+               [s3 (letrec-s3 e)])
+           (if (and (string? s1)(string? s2)(string? s3))
+               (eval-under-env (letrec-e3 e) (cons (cons s1 e1)(cons (cons s2 e2)(cons (cons s3 e3) env))))
+               (error "First, third, and fifth arguments of letrec must be string")))]
+         
+         
          
 
         
