@@ -90,7 +90,7 @@
                [#t (error "NUMEX bool must contain a boolean")])]
 
         [(munit? e) ;; Evaluating munit
-         munit]
+         (munit)]
 
         [ (closure? e) e]
 
@@ -198,7 +198,13 @@
                            [funFormal (lam-formal funDec)])
                        (eval-under-env (lam-body funDec) (cons (cons funFormal actual)(cons (cons funName funClosure)closEnv))))
                      (error "Closure's function is not in the right shape (lam)"))) 
-               (error "Function doesn't evaluate to closure")))]
+               (if (lam? funClosure)
+                   (let ([funName (lam-nameopt funClosure)]
+                           [funFormal (lam-formal funClosure)])
+                       (eval-under-env (lam-body funClosure) (cons (cons funFormal actual)(cons (cons funName funClosure) env))))
+                   (error "Function doesn't evaluate to closure"))))]
+
+        
 
         [(apair? e) ;; Evaluating apair
          (let ([v1 (eval-under-env (apair-e1 e) env)]
@@ -217,18 +223,19 @@
 
         [(ismunit? e) ;; Evaluating ismunit
          (let ([v1 (eval-under-env (ismunit-e e) env)])
-           (if (eq? v1 munit) (bool #t)
+           (if (munit? v1) (bool #t)
                (bool #f)))]
 
         [(letrec? e) ;; Evaluating letrec
-         (let ([e1 (eval-under-env (letrec-e1 e) env)]
+         (let ([e1 (letrec-e1 e)]
                [s1 (letrec-s1 e)]
-               [e2 (eval-under-env (letrec-e2 e) env)]
+               [e2 (letrec-e2 e)]
                [s2 (letrec-s2 e)]
-               [e3 (eval-under-env (letrec-e3 e) env)]
-               [s3 (letrec-s3 e)])
+               [e3 (letrec-e3 e)]
+               [s3 (letrec-s3 e)]
+               [e4 (letrec-e4 e)])
            (if (and (string? s1)(string? s2)(string? s3))
-               (eval-under-env (letrec-e3 e) (cons (cons s1 e1)(cons (cons s2 e2)(cons (cons s3 e3) env))))
+               (eval-under-env e4 (cons (cons s1 e1)(cons (cons s2 e2)(cons (cons s3 e3) env))))
                (error "First, third, and fifth arguments of NUMEX letrec must be string")))]
 
         [(queue? e) ;; Evaluating queue
@@ -248,7 +255,7 @@
          (let ([q (dequeue-q e)])
            (cond [(queue? q) (let ([restq (queue-q q)]
                                    [firstq (queue-e q)])
-                               (cond [(eq? (eval-under-env restq env) munit) (munit)]
+                               (cond [(munit? restq) (munit)]
                                      [#t (queue firstq (eval-under-env (dequeue restq) env))]))]
                  [#t (error "Only argument of NUMEX dequeue must evaluate to a queue")]))]
 
@@ -256,7 +263,7 @@
          (let ([q (extract-q e)])
            (cond [(queue? q) (let ([restq (queue-q q)]
                                    [firstq (queue-e q)])
-                               (cond [(eq? (eval-under-env restq env) munit) firstq]
+                               (cond [(munit? restq) firstq]
                                      [#t (eval-under-env (extract restq) env)]))]
                  [#t (error "Only argument of NUMEX extract must evaluate to a queue")]))]
          
