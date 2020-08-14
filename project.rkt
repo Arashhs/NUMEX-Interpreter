@@ -289,8 +289,18 @@
 
 ;; Problem 4
 
-(define numex-filter "CHANGE")
+(define numex-filter (lam "function" "filterFun" ;; Returns the function "function" which takes a function "filterFun" as argument
+                          (lam "numexFilter" "numexList" 
+                               (cnd (ismunit (var "numexList")) (munit)
+                                    (ifnzero (apply (var "filterFun") (1st (var "numexList")))
+                                              (apair (apply (var "filterFun") (1st (var "numexList")))
+                                                     (apply (var "numexFilter") (2nd (var "numexList"))))
+                                              (apply (var "numexFilter") (2nd (var "numexList"))))))))
+
+
 
 (define numex-all-gt
-  (with "filter" numex-filter
-        "CHANGE (notice filter is now in NUMEX scope)"))
+  (with "numex-filter" numex-filter
+        (lam "function" "i" (apply (var "numex-filter") (lam "greater than" "number" (ifleq (var "number") (var "i") (num 0)(var "number")))))))
+
+        
