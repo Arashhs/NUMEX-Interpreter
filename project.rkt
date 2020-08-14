@@ -277,11 +277,15 @@
         
 ;; Problem 3
 
-(define (ifmunit e1 e2 e3) "CHANGE")
+(define (ifmunit e1 e2 e3)
+  (cnd (ismunit e1) e2 e3))
 
-(define (with* bs e2) "CHANGE")
+(define (with* bs e2)
+  (cond [(null? (cdr bs)) (with (caar bs) (cdar bs) e2)]
+        [#t (with (caar bs) (cdar bs) (with* (cdr bs) e2))]))
 
-(define (ifneq e1 e2 e3 e4) "CHANGE")
+(define (ifneq e1 e2 e3 e4)
+  (cnd (iseq e1 e2) e4 e3))
 
 ;; Problem 4
 
