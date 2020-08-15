@@ -303,4 +303,9 @@
   (with "numex-filter" numex-filter
         (lam "function" "i" (apply (var "numex-filter") (lam "greater than" "number" (ifleq (var "number") (var "i") (num 0)(var "number")))))))
 
-        
+(define (fibonacci n) (eval-exp (apply (lam "fibonacci" "x"
+                                            ( ifleq (var "x") (num 2) (num 1)
+                                                                    (plus (apply (var "fibonacci") (minus (var "x") (num 1)))
+                                                                                                    (apply (var "fibonacci")
+                                                                                                           (minus (var "x") (num 2))))))
+                                       (num n))))
