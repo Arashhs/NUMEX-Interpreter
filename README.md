@@ -1,5 +1,6 @@
 # NUMEX-Interpreter
-A pure functional implementation of NUMEX (Number Expression Programming Language) written in Racket<br/>
+A pure functional implementation of NUMEX (Number Expression Programming Language) written in Racket
+---
 __Example Command__:
 ```lisp
 (eval-exp (with "f1" (lam "f1" "a" (with "x" (var "a") (lam "f2" "z" (plus (var "x") (num 1)))))
